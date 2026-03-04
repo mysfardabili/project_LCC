@@ -1,4 +1,4 @@
-# SIM-LCC — Luqmaniyyah Copy Center
+# LCC — Luqmaniyyah Copy Center
 
 Aplikasi web untuk mengelola pemesanan kitab dan produk pesantren. Terdapat dua peran: **Admin** (kelola produk, order, santri, verifikasi pembayaran) dan **Santri** (pesan produk, upload bukti transfer, lihat riwayat order).
 
