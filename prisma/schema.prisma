@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SANTRI
+}
+
+enum ProductType {
+  KITAB
+  PAKET
+  ALAT_TULIS
+  LAYANAN
+}
+
+enum OrderStatus {
+  PENDING
+  DIPROSES
+  SELESAI
+  DIBATALKAN
+}
+
+enum PaymentStatus {
+  BELUM_BAYAR
+  MENUNGGU_VERIFIKASI
+  LUNAS
+  DITOLAK
+}
+
+enum PaymentMethod {
+  TRANSFER
+  CASH
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  nim       String?  @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(SANTRI)
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders              Order[] @relation("SantriOrders")
+  adminOrders         Order[] @relation("AdminOrders")
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  type        ProductType
+  price       Decimal
+  description String?
+  isActive    Boolean     @default(true)
+  stock       Int?
+  imageUrl    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  packageDetails PackageDetail[] @relation("PackageProducts")
+  includedIn     PackageDetail[] @relation("ProductInPackage")
+  orderItems     OrderItem[]
+
+  @@map("products")
+}
+
+model PackageDetail {
+  id        String  @id @default(cuid())
+  packageId String
+  productId String
+  quantity  Int     @default(1)
+
+  package Product @relation("PackageProducts", fields: [packageId], references: [id], onDelete: Cascade)
+  product Product @relation("ProductInPackage", fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, productId])
+  @@map("package_details")
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  userId        String
+  adminId       String?
+  orderNumber   String        @unique
+  totalPrice    Decimal
+  orderStatus   OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(BELUM_BAYAR)
+  paymentMethod PaymentMethod @default(TRANSFER)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user       User         @relation("SantriOrders", fields: [userId], references: [id], onDelete: Cascade)
+  admin      User?        @relation("AdminOrders", fields: [adminId], references: [id])
+  items      OrderItem[]
+  payment    PaymentProof?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Decimal
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model PaymentProof {
+  id         String    @id @default(cuid())
+  orderId    String    @unique
+  fileUrl    String
+  fileName   String
+  uploadedAt DateTime  @default(now())
+  verifiedAt DateTime?
+  verifiedBy String?
+  notes      String?
+  status     PaymentStatus @default(MENUNGGU_VERIFIKASI)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payment_proofs")
+}
